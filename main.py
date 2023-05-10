@@ -45,12 +45,12 @@ def get_file_list():
 
 
 @click.command()
-@click.option('--dir', default=os.path.join(os.getcwd(), 'download'), help="Usage:python .\main.py --dir='D:\amomorning\Desktop\\tmp'")
+@click.option('--dir', default=os.path.join(os.getcwd()), help="Usage:python main.py --dir='D:\amomorning\Desktop\\tmp'")
 def main(dir):
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
 
-    app.config['UPLOAD_FOLDER'] = dir
+    app.config['UPLOAD_FOLDER'] = os.path.abspath(dir)
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
     host = socket.gethostbyname(socket.gethostname())
     port = 5000
