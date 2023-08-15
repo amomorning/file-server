@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import os, socket, logging, click
+import os, sys, socket, logging, click
 from flask import Flask, request, url_for, send_from_directory, send_file
 
 app = Flask(__name__)
@@ -43,6 +43,11 @@ def get_file_list():
     ret += "</ul>"
     return ret
 
+def get_ip_addr():
+    if sys.platform == 'win32':
+        return socket.gethostbyname(socket.gethostname())
+    elif sys.platform == 'darwin':
+        return os.popen("ipconfig getifaddr en0").read().strip('\n')
 
 @click.command()
 @click.option('--dir', default=os.path.join(os.getcwd()), help="Usage:python main.py --dir='D:\amomorning\Desktop\\tmp'")
@@ -52,8 +57,8 @@ def main(dir):
 
     app.config['UPLOAD_FOLDER'] = os.path.abspath(dir)
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-    host = socket.gethostbyname(socket.gethostname())
-    port = 5000
+    host = get_ip_addr()
+    port = 32198
     print(f" * Running on http://{host}:{port}")
     print(f" * Syncing folder {app.config['UPLOAD_FOLDER']}")
     app.run(host='0.0.0.0', port=port)
