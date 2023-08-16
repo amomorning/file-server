@@ -48,6 +48,12 @@ def get_ip_addr():
         return socket.gethostbyname(socket.gethostname())
     elif sys.platform == 'darwin':
         return os.popen("ipconfig getifaddr en0").read().strip('\n')
+    else:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ret = s.getsockname()[0]
+        s.close()
+        return ret
 
 @click.command()
 @click.option('--dir', default=os.path.join(os.getcwd()), help="Usage:python main.py --dir='D:\amomorning\Desktop\\tmp'")
