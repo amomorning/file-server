@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import os, sys, socket, logging, click
 from flask import Flask, request, url_for, send_from_directory, send_file
-import zipfile
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1000 * 1000
 
@@ -12,7 +11,6 @@ html = '''
     <form method=post enctype=multipart/form-data>
          <input type=file name=file>
          <input type=submit value=upload name=upload>
-         <input type=submit value=download name=download>
     </form>
     '''
     
@@ -24,7 +22,6 @@ def uploaded_file(filename):
 @app.route('/download/<path:filename>')
 def download_file(filename):
     file = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    print(file)
     if os.path.isfile(file):
         return send_file(file)
     else:
@@ -34,23 +31,12 @@ def download_file(filename):
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
 @app.route('/<path:path>', methods=['GET', 'POST'])
 def upload_file(path=''):
-    print(path, request.method)
     if request.method == 'POST':
         file = request.files['file']
-        print(request)
         if file and request.form['upload'] == 'upload':
             filename = file.filename
             file.save(os.path.join(os.path.join(app.config['UPLOAD_FOLDER'], path), filename))
             file_url = url_for('uploaded_file', filename=filename)
-        elif request.form['download'] == 'download':
-            current_path = os.path.join(app.config['UPLOAD_FOLDER'], path)
-            zipf = zipfile.ZipFile(os.path.join(current_path, 'tmp.zip'), 'w', zipfile.ZIP_DEFLATED)
-
-            for file in os.listdir(current_path):
-                if os.path.isfile(os.path.join(current_path, file)):
-                    zipf.write(os.path.join(current_path, file), file)
-            zipf.close()
-            return send_file(os.path.join(current_path, 'tmp.zip'), mimetype = 'zip', as_attachment=True)
     return html + get_file_list(path)
 
 
