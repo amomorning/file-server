@@ -66,6 +66,8 @@ def get_ip_addr():
         return socket.gethostbyname(socket.gethostname())
     elif sys.platform == 'darwin':
         return os.popen("ipconfig getifaddr en0").read().strip('\n')
+    elif sys.platform == 'linux':
+        return os.popen("hostname -I").read().strip('\n').split(' ')[0]
     else:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(('8.8.8.8', 80))
