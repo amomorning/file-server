@@ -33,15 +33,16 @@ def download_file(filename):
 
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
 @app.route('/<path:path>', methods=['GET', 'POST'])
-def upload_file(path):
+def upload_file(path=''):
+    print(path, request.method)
     if request.method == 'POST':
         file = request.files['file']
         print(request)
-        if file and 'upload' in request.form:
+        if file and request.form['upload'] == 'upload':
             filename = file.filename
             file.save(os.path.join(os.path.join(app.config['UPLOAD_FOLDER'], path), filename))
             file_url = url_for('uploaded_file', filename=filename)
-        if 'download' in request.form:
+        elif request.form['download'] == 'download':
             current_path = os.path.join(app.config['UPLOAD_FOLDER'], path)
             zipf = zipfile.ZipFile(os.path.join(current_path, 'tmp.zip'), 'w', zipfile.ZIP_DEFLATED)
 
@@ -61,14 +62,16 @@ def get_file_list(folder=""):
     path = os.path.join(app.config['UPLOAD_FOLDER'], folder)
     ret = f"<p>Here are the files in the {path} directory:</p>"
     ret += "<ul style='display:flex;flex-direction: column;flex-wrap: wrap;'>"
+    if folder=="" or folder[0] != '/': folder = '/' + folder
+    if folder[-1] != '/': folder += '/'
     for file in os.listdir(path):
         if os.path.isfile(os.path.join(path, file)):
             if is_image(file):
-                ret += f"<li><a href='/download/{folder}/{file}'><img src='/download/{folder}/{file}' width='100px'></a></li>"
+                ret += f"<li><a href='/download{folder}{file}'><img src='/download{folder}{file}' width='100px'></a></li>"
             else:
-                ret += f"<li><a href='/download/{folder}/{file}'>{file}</a></li>"
+                ret += f"<li><a href='/download{folder}{file}'>{file}</a></li>"
         else:
-            ret += f"<li><a href='{folder}/{file}'>{file}</a></li>"
+            ret += f"<li><a href='{folder}{file}'>{file}</a></li>"
     ret += "</ul>"
     return ret
 
