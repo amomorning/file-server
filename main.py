@@ -24,6 +24,7 @@ def uploaded_file(filename):
 @app.route('/download/<path:filename>')
 def download_file(filename):
     file = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    print(file)
     if os.path.isfile(file):
         return send_file(file)
     else:
@@ -42,12 +43,13 @@ def upload_file(path):
             file_url = url_for('uploaded_file', filename=filename)
         if 'download' in request.form:
             current_path = os.path.join(app.config['UPLOAD_FOLDER'], path)
-            zipf = zipfile.ZipFile('tmp.zip', 'w', zipfile.ZIP_DEFLATED)
+            zipf = zipfile.ZipFile(os.path.join(current_path, 'tmp.zip'), 'w', zipfile.ZIP_DEFLATED)
+
             for file in os.listdir(current_path):
                 if os.path.isfile(os.path.join(current_path, file)):
                     zipf.write(os.path.join(current_path, file), file)
             zipf.close()
-            return send_file('tmp.zip', mimetype = 'zip', attachment_filename= 'tmp.zip', as_attachment=True)
+            return send_file(os.path.join(current_path, 'tmp.zip'), mimetype = 'zip', as_attachment=True)
     return html + get_file_list(path)
 
 
