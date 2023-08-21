@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import os, sys, socket, logging, click
 from flask import Flask, request, url_for, send_from_directory, send_file
-
+import zipfile
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1000 * 1000
 
 html = '''
     <!DOCTYPE html>
@@ -10,36 +11,62 @@ html = '''
     <h1>File Upload</h1>
     <form method=post enctype=multipart/form-data>
          <input type=file name=file>
-         <input type=submit value=upload>
+         <input type=submit value=upload name=upload>
+         <input type=submit value=download name=download>
     </form>
     '''
     
-@app.route('/uploads/<filename>')
+@app.route('/upload/<path:filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
-@app.route('/download/<filename>')
+@app.route('/download/<path:filename>')
 def download_file(filename):
-    return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-    
+    file = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if os.path.isfile(file):
+        return send_file(file)
+    else:
+        return html + "File not found!"
 
-@app.route('/', methods=['GET', 'POST'])
-def upload_file():
+
+@app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
+@app.route('/<path:path>', methods=['GET', 'POST'])
+def upload_file(path):
     if request.method == 'POST':
         file = request.files['file']
-        if file:
+        print(request)
+        if file and 'upload' in request.form:
             filename = file.filename
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            file.save(os.path.join(os.path.join(app.config['UPLOAD_FOLDER'], path), filename))
             file_url = url_for('uploaded_file', filename=filename)
-            return html + get_file_list()
-    return html + get_file_list()
+        if 'download' in request.form:
+            current_path = os.path.join(app.config['UPLOAD_FOLDER'], path)
+            zipf = zipfile.ZipFile('tmp.zip', 'w', zipfile.ZIP_DEFLATED)
+            for file in os.listdir(current_path):
+                if os.path.isfile(os.path.join(current_path, file)):
+                    zipf.write(os.path.join(current_path, file), file)
+            zipf.close()
+            return send_file('tmp.zip', mimetype = 'zip', attachment_filename= 'tmp.zip', as_attachment=True)
+    return html + get_file_list(path)
 
-def get_file_list():
-    ret = "<p>Here are the files in the download directory:</p>"
-    ret += "<ul>"
-    for file in os.listdir(app.config['UPLOAD_FOLDER']):
-        ret += f"<li><a href='/download/{file}'>{file}</a></li>"
+
+def is_image(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ['png', 'jpg', 'jpeg', 'gif']
+
+def get_file_list(folder=""):
+    path = os.path.join(app.config['UPLOAD_FOLDER'], folder)
+    ret = f"<p>Here are the files in the {path} directory:</p>"
+    ret += "<ul style='display:flex;flex-direction: column;flex-wrap: wrap;'>"
+    for file in os.listdir(path):
+        if os.path.isfile(os.path.join(path, file)):
+            if is_image(file):
+                ret += f"<li><a href='/download/{folder}/{file}'><img src='/download/{folder}/{file}' width='100px'></a></li>"
+            else:
+                ret += f"<li><a href='/download/{folder}/{file}'>{file}</a></li>"
+        else:
+            ret += f"<li><a href='{folder}/{file}'>{file}</a></li>"
     ret += "</ul>"
     return ret
 
