@@ -17,7 +17,16 @@ app = Flask(__name__, template_folder='assets')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB最大文件大小
 
 # 支持的图片格式
-IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'}
+IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'ico'}
+
+# 可在网页端预览的文件类型
+PREVIEWABLE_EXTENSIONS = {
+    # 文档类
+    'md', 'html', 'htm', 'txt', 'json', 'xml', 'csv', 'log',
+    'ini', 'conf', 'yaml', 'yml', 'toml',
+    # 图片类
+    'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico'
+}
 
 # 文档类型扩展名
 DOCUMENT_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'md'}
@@ -74,6 +83,15 @@ def uploaded_file(filename):
 @app.route('/download/<path:filename>')
 def download_file(filename):
     """处理文件下载请求"""
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if os.path.isfile(file_path):
+        return send_file(file_path, as_attachment=True)
+    return "File not found!", 404
+
+
+@app.route('/preview/<path:filename>')
+def preview_file(filename):
+    """处理文件预览请求"""
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     if os.path.isfile(file_path):
         return send_file(file_path)
@@ -154,27 +172,69 @@ def generate_file_card(filename, folder):
     """生成单个文件的卡片HTML"""
     ext = get_file_extension(filename)
     file_type = get_file_type(ext)
+    file_path = format_path(folder) + filename
+
+    # 判断文件是否可预览
+    previewable = is_previewable(filename)
 
     if is_image(filename):
-        return f"""
-        <div class="file-card" data-type="image">
-            <a href="/download{format_path(folder)}{filename}" target="_blank">
-                <img src="/download{format_path(folder)}{filename}" alt="{filename}">
-            </a>
-            <div class="file-name">{filename}</div>
-            <div class="file-actions">
-                <a href="/download{format_path(folder)}{filename}" class="download-btn" target="_blank">⬇ 下载</a>
+        # 图片文件:显示缩略图,双按钮
+        if previewable:
+            return f"""
+            <div class="file-card" data-type="image">
+                <a href="/preview{file_path}" target="_blank">
+                    <img src="/preview{file_path}" alt="{filename}">
+                </a>
+                <div class="file-name">{filename}</div>
+                <div class="file-actions">
+                    <a href="/preview{file_path}" class="preview-btn" target="_blank">👁 预览</a>
+                    <a href="/download{file_path}" class="download-btn">⬇ 下载</a>
+                </div>
             </div>
-        </div>
-        """
+            """
+        else:
+            return f"""
+            <div class="file-card" data-type="image">
+                <img src="/preview{file_path}" alt="{filename}">
+                <div class="file-name">{filename}</div>
+                <div class="file-actions">
+                    <a href="/download{file_path}" class="download-btn full-btn">⬇ 下载</a>
+                </div>
+            </div>
+            """
+    elif ext in ['md', 'html', 'htm', 'txt', 'json', 'xml', 'csv', 'log', 'ini', 'conf', 'yaml', 'yml', 'toml']:
+        # 可预览的文档文件
+        icon = FILE_ICONS.get(ext, '📄')
+        if previewable:
+            return f"""
+            <div class="file-card" data-type="{file_type}">
+                <div class="file-icon">{icon}</div>
+                <div class="file-name">{filename}</div>
+                <div class="file-actions">
+                    <a href="/preview{file_path}" class="preview-btn" target="_blank">👁 预览</a>
+                    <a href="/download{file_path}" class="download-btn">⬇ 下载</a>
+                </div>
+            </div>
+            """
+        else:
+            return f"""
+            <div class="file-card" data-type="{file_type}">
+                <div class="file-icon">{icon}</div>
+                <div class="file-name">{filename}</div>
+                <div class="file-actions">
+                    <a href="/download{file_path}" class="download-btn full-btn">⬇ 下载</a>
+                </div>
+            </div>
+            """
     else:
+        # 其他文件:只有下载按钮
         icon = FILE_ICONS.get(ext, '📄')
         return f"""
         <div class="file-card" data-type="{file_type}">
             <div class="file-icon">{icon}</div>
             <div class="file-name">{filename}</div>
             <div class="file-actions">
-                <a href="/download{format_path(folder)}{filename}" class="download-btn" target="_blank">⬇ 下载</a>
+                <a href="/download{file_path}" class="download-btn full-btn">⬇ 下载</a>
             </div>
         </div>
         """
@@ -255,6 +315,12 @@ def is_image(filename):
 def get_file_extension(filename):
     """获取文件扩展名(小写)"""
     return filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+
+
+def is_previewable(filename):
+    """判断文件是否可在网页端直接预览"""
+    ext = get_file_extension(filename)
+    return ext in PREVIEWABLE_EXTENSIONS
 
 
 def get_ip_addr():
