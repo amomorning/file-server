@@ -14,7 +14,7 @@ from flask import Flask, render_template, request, send_from_directory, send_fil
 
 # 初始化Flask应用
 app = Flask(__name__, template_folder='assets')
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB最大文件大小
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB最大文件大小
 
 # 支持的图片格式
 IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'ico'}
@@ -23,7 +23,7 @@ IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'ico'}
 PREVIEWABLE_EXTENSIONS = {
     # 文档类
     'md', 'html', 'htm', 'txt', 'json', 'xml', 'csv', 'log',
-    'ini', 'conf', 'yaml', 'yml', 'toml',
+    'ini', 'conf', 'yaml', 'yml', 'toml', 'pdf',
     # 图片类
     'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico'
 }
@@ -174,6 +174,10 @@ def generate_file_card(filename, folder):
     file_type = get_file_type(ext)
     file_path = format_path(folder) + filename
 
+    # 获取文件大小
+    full_path = os.path.join(app.config['UPLOAD_FOLDER'], folder, filename)
+    file_size = format_file_size(os.path.getsize(full_path)) if os.path.exists(full_path) else ''
+
     # 判断文件是否可预览
     previewable = is_previewable(filename)
 
@@ -186,6 +190,7 @@ def generate_file_card(filename, folder):
                     <img src="/preview{file_path}" alt="{filename}">
                 </a>
                 <div class="file-name">{filename}</div>
+                <div class="file-size">{file_size}</div>
                 <div class="file-actions">
                     <a href="/preview{file_path}" class="preview-btn" target="_blank">👁 预览</a>
                     <a href="/download{file_path}" class="download-btn">⬇ 下载</a>
@@ -197,12 +202,13 @@ def generate_file_card(filename, folder):
             <div class="file-card" data-type="image">
                 <img src="/preview{file_path}" alt="{filename}">
                 <div class="file-name">{filename}</div>
+                <div class="file-size">{file_size}</div>
                 <div class="file-actions">
                     <a href="/download{file_path}" class="download-btn full-btn">⬇ 下载</a>
                 </div>
             </div>
             """
-    elif ext in ['md', 'html', 'htm', 'txt', 'json', 'xml', 'csv', 'log', 'ini', 'conf', 'yaml', 'yml', 'toml']:
+    elif ext in ['md', 'html', 'htm', 'txt', 'json', 'xml', 'csv', 'log', 'ini', 'conf', 'yaml', 'yml', 'toml', 'pdf']:
         # 可预览的文档文件
         icon = FILE_ICONS.get(ext, '📄')
         if previewable:
@@ -210,6 +216,7 @@ def generate_file_card(filename, folder):
             <div class="file-card" data-type="{file_type}">
                 <div class="file-icon">{icon}</div>
                 <div class="file-name">{filename}</div>
+                <div class="file-size">{file_size}</div>
                 <div class="file-actions">
                     <a href="/preview{file_path}" class="preview-btn" target="_blank">👁 预览</a>
                     <a href="/download{file_path}" class="download-btn">⬇ 下载</a>
@@ -221,6 +228,7 @@ def generate_file_card(filename, folder):
             <div class="file-card" data-type="{file_type}">
                 <div class="file-icon">{icon}</div>
                 <div class="file-name">{filename}</div>
+                <div class="file-size">{file_size}</div>
                 <div class="file-actions">
                     <a href="/download{file_path}" class="download-btn full-btn">⬇ 下载</a>
                 </div>
@@ -233,6 +241,7 @@ def generate_file_card(filename, folder):
         <div class="file-card" data-type="{file_type}">
             <div class="file-icon">{icon}</div>
             <div class="file-name">{filename}</div>
+            <div class="file-size">{file_size}</div>
             <div class="file-actions">
                 <a href="/download{file_path}" class="download-btn full-btn">⬇ 下载</a>
             </div>
@@ -315,6 +324,25 @@ def is_image(filename):
 def get_file_extension(filename):
     """获取文件扩展名(小写)"""
     return filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+
+
+def format_file_size(size_bytes):
+    """
+    格式化文件大小为人类可读格式
+    例如: 1024 -> 1 KB, 1048576 -> 1 MB
+    """
+    if size_bytes == 0:
+        return '0 B'
+
+    size_names = ['B', 'KB', 'MB', 'GB', 'TB']
+    i = 0
+    size = float(size_bytes)
+
+    while size >= 1024.0 and i < len(size_names) - 1:
+        size /= 1024.0
+        i += 1
+
+    return f'{size:.1f} {size_names[i]}'
 
 
 def is_previewable(filename):
