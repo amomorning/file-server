@@ -7,6 +7,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1000 * 1000
 html = '''
     <!DOCTYPE html>
     <title>Upload File</title>
+    <link rel="icon" type="image/png" href="/favicon.ico">
     <h1>File Upload</h1>
     <form method=post enctype=multipart/form-data>
          <input type=file name=file>
@@ -26,6 +27,11 @@ def download_file(filename):
         return send_file(file)
     else:
         return html + "File not found!"
+
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_file('favicon_32.png')
 
 
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
@@ -76,7 +82,7 @@ def get_ip_addr():
         return ret
 
 @click.command()
-@click.option('--dir', default=os.path.join(os.getcwd()), help="Usage:python main.py --dir='D:\amomorning\Desktop\\tmp'")
+@click.argument('dir', default=os.getcwd())
 def main(dir):
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
