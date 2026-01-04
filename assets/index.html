@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>文件共享器</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/favicon.ico">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header h1 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 28px;
+        }
+        .breadcrumb {
+            color: #666;
+            font-size: 14px;
+        }
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        .upload-area {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 3px dashed #667eea;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .upload-area:hover, .upload-area.dragover {
+            background: #f8f9ff;
+            border-color: #764ba2;
+        }
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .upload-text {
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 16px;
+        }
+        #fileInput {
+            display: none;
+        }
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .upload-btn:hover {
+            transform: translateY(-2px);
+        }
+        .upload-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .progress-bar {
+            display: none;
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 16px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+        }
+        .file-list {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .file-list h2 {
+            color: #333;
+            margin-bottom: 16px;
+            font-size: 20px;
+        }
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .filter-tab {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            color: #666;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .filter-tab:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+        .filter-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+            color: white;
+        }
+        .file-card.hidden {
+            display: none;
+        }
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+        }
+        .file-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 16px;
+            transition: all 0.3s;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .file-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .file-card img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+        .file-card .file-icon {
+            width: 100%;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 6px;
+            margin-bottom: 12px;
+            color: white;
+            font-size: 48px;
+        }
+        .file-card .file-name {
+            color: #333;
+            font-size: 14px;
+            word-break: break-all;
+            margin-bottom: 8px;
+            flex-grow: 1;
+        }
+        .file-card .file-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: auto;
+        }
+        .file-card a {
+            flex: 1;
+            text-align: center;
+            padding: 8px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .download-btn {
+            background: #667eea;
+            color: white;
+        }
+        .download-btn:hover {
+            background: #5568d3;
+        }
+        .folder-btn {
+            background: #28a745;
+            color: white;
+        }
+        .folder-btn:hover {
+            background: #218838;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        @media (max-width: 768px) {
+            .file-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 12px;
+            }
+            .upload-area {
+                padding: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📁 文件共享器</h1>
+            <div class="breadcrumb" id="breadcrumb">{{ breadcrumb|safe }}</div>
+        </div>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📤</div>
+            <div class="upload-text">拖放文件到这里或点击上传</div>
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">选择文件</button>
+            <input type="file" id="fileInput" name="file">
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <div class="file-list">
+            <h2>📂 文件列表</h2>
+            <div class="filter-tabs" id="filterTabs">
+                <div class="filter-tab active" data-filter="all">📋 全部</div>
+                <div class="filter-tab" data-filter="folder">📁 文件夹</div>
+                <div class="filter-tab" data-filter="image">🖼️ 图片</div>
+                <div class="filter-tab" data-filter="document">📄 文档</div>
+                <div class="filter-tab" data-filter="code">💻 代码</div>
+                <div class="filter-tab" data-filter="media">🎬 音视频</div>
+                <div class="filter-tab" data-filter="archive">📦 压缩包</div>
+            </div>
+            <div class="file-grid" id="fileGrid">{{ file_grid|safe }}</div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                uploadFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadFile(e.target.files[0]);
+            }
+        });
+
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload', 'upload');
+
+            progressBar.style.display = 'block';
+            progressFill.style.width = '0%';
+
+            const xhr = new XMLHttpRequest();
+
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    progressFill.style.width = percentComplete + '%';
+                }
+            });
+
+            xhr.addEventListener('load', () => {
+                setTimeout(() => {
+                    location.reload();
+                }, 500);
+            });
+
+            xhr.open('POST', window.location.href, true);
+            xhr.send(formData);
+        }
+
+        // 文件过滤器功能
+        const filterTabs = document.getElementById('filterTabs');
+        const fileCards = document.querySelectorAll('.file-card');
+
+        filterTabs.addEventListener('click', (e) => {
+            if (e.target.classList.contains('filter-tab')) {
+                // 移除所有active状态
+                document.querySelectorAll('.filter-tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                // 添加active状态到当前点击的标签
+                e.target.classList.add('active');
+
+                const filter = e.target.getAttribute('data-filter');
+                filterFiles(filter);
+            }
+        });
+
+        function filterFiles(filterType) {
+            fileCards.forEach(card => {
+                const cardType = card.getAttribute('data-type') || 'other';
+
+                if (filterType === 'all') {
+                    card.classList.remove('hidden');
+                } else if (filterType === cardType) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
