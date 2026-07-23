@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-文件共享器 - 一个简单的文件共享服务
-支持拖放上传、文件预览、文件夹导航等功能
+File sharer — a small Flask server that shares a local directory over HTTP.
+Supports drag-and-drop upload, in-browser preview, and folder navigation.
 """
 
 import os
@@ -12,26 +12,26 @@ import logging
 import click
 from flask import Flask, render_template, request, send_from_directory, send_file
 
-# 初始化Flask应用
+# Flask app setup
 app = Flask(__name__, template_folder='assets')
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB最大文件大小
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB upload cap
 
-# 支持的图片格式
+# Image extensions (rendered as thumbnails)
 IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'ico'}
 
-# 可在网页端预览的文件类型
+# File types renderable inline in the browser
 PREVIEWABLE_EXTENSIONS = {
-    # 文档类
+    # documents
     'md', 'html', 'htm', 'txt', 'json', 'xml', 'csv', 'log',
     'ini', 'conf', 'yaml', 'yml', 'toml', 'pdf',
-    # 图片类
+    # images
     'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico'
 }
 
-# 文档类型扩展名
+# Document extensions
 DOCUMENT_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'md'}
 
-# 代码文件扩展名
+# Source-code extensions
 CODE_EXTENSIONS = {
     'py', 'js', 'html', 'css', 'json', 'xml', 'java', 'c', 'cpp', 'h', 'hpp',
     'cs', 'php', 'rb', 'go', 'rs', 'kt', 'swift', 'ts', 'jsx', 'tsx', 'vue',
@@ -39,68 +39,44 @@ CODE_EXTENSIONS = {
     'csv', 'typ', 'log', 'dockerfile', 'makefile', 'r', 'm', 'scala', 'dart'
 }
 
-# 音视频扩展名
+# Audio / video extensions
 MEDIA_EXTENSIONS = {'mp3', 'wav', 'flac', 'mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv'}
 
-# 压缩包扩展名
+# Archive extensions
 ARCHIVE_EXTENSIONS = {'zip', 'rar', '7z', 'tar', 'gz', 'bz2'}
 
-# 文件类型图标映射
-FILE_ICONS = {
-    'pdf': '📄',
-    'doc': '📝', 'docx': '📝',
-    'xls': '📊', 'xlsx': '📊',
-    'ppt': '📽', 'pptx': '📽',
-    'txt': '📃',
-    'zip': '📦', 'rar': '📦', '7z': '📦',
-    'mp3': '🎵', 'wav': '🎵', 'flac': '🎵',
-    'mp4': '🎬', 'avi': '🎬', 'mkv': '🎬', 'mov': '🎬',
-    # 编程语言图标
-    'py': '🐍', 'python': '🐍',
-    'js': '📜', 'jsx': '⚛️', 'ts': '💎', 'tsx': '💎',
-    'html': '🌐', 'css': '🎨',
-    'java': '☕', 'c': '⚙', 'cpp': '⚙', 'h': '📋', 'hpp': '📋',
-    'cs': '💠', 'php': '🐘',
-    'rb': '💎', 'go': '🐹', 'rs': '⚙️',
-    'swift': '🍎', 'kt': '🤖',
-    'sql': '🗃️', 'sh': '💻', 'bash': '💻',
-    'json': '📋', 'xml': '📋', 'yaml': '⚙️', 'yml': '⚙️',
-    'csv': '📊', 'typ': '📝',
-    'vue': '💚', 'dockerfile': '🐳',
-    'r': '📊', 'm': '📊',
-    'exe': '⚙', 'msi': '⚙',
-}
 
-
-# ==================== 路由处理 ====================
+# ==================== Routes ====================
 
 @app.route('/upload/<path:filename>')
 def uploaded_file(filename):
-    """处理已上传文件的访问"""
+    """Serve an already-uploaded file from UPLOAD_FOLDER."""
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+
+def _serve_file(filename, as_attachment):
+    """Serve a file from UPLOAD_FOLDER, or 404 if it is missing."""
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if os.path.isfile(file_path):
+        return send_file(file_path, as_attachment=as_attachment)
+    return "File not found!", 404
 
 
 @app.route('/download/<path:filename>')
 def download_file(filename):
-    """处理文件下载请求"""
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    if os.path.isfile(file_path):
-        return send_file(file_path, as_attachment=True)
-    return "File not found!", 404
+    """Serve a file as a download (Content-Disposition: attachment)."""
+    return _serve_file(filename, as_attachment=True)
 
 
 @app.route('/preview/<path:filename>')
 def preview_file(filename):
-    """处理文件预览请求"""
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    if os.path.isfile(file_path):
-        return send_file(file_path)
-    return "File not found!", 404
+    """Serve a file inline for in-browser preview."""
+    return _serve_file(filename, as_attachment=False)
 
 
 @app.route('/favicon.ico')
 def favicon():
-    """返回网站图标"""
+    """Return the site favicon."""
     return send_file('assets/favicon_32.png')
 
 
@@ -108,9 +84,9 @@ def favicon():
 @app.route('/<path:path>', methods=['GET', 'POST'])
 def index(path=''):
     """
-    主页面路由
-    - GET: 显示文件列表
-    - POST: 处理文件上传
+    Index route.
+    - GET:  render the file list for the path
+    - POST: handle a file upload into the path
     """
     if request.method == 'POST':
         handle_file_upload(path)
@@ -123,10 +99,10 @@ def index(path=''):
                          file_grid=file_grid)
 
 
-# ==================== 文件处理函数 ====================
+# ==================== File handling ====================
 
 def handle_file_upload(path):
-    """处理文件上传"""
+    """Read the uploaded file from the POST body and save it under `path`."""
     if 'file' not in request.files:
         return
 
@@ -136,7 +112,7 @@ def handle_file_upload(path):
 
 
 def save_file(file, path):
-    """保存上传的文件"""
+    """Persist the uploaded file under UPLOAD_FOLDER/`path`."""
     filename = file.filename
     upload_path = os.path.join(app.config['UPLOAD_FOLDER'], path)
     file.save(os.path.join(upload_path, filename))
@@ -144,8 +120,8 @@ def save_file(file, path):
 
 def generate_file_grid(folder=""):
     """
-    生成文件网格HTML
-    返回包含所有文件和文件夹的卡片式布局
+    Build the HTML for the file grid under `folder`.
+    Returns one card per file/subfolder, sorted by name.
     """
     path = os.path.join(app.config['UPLOAD_FOLDER'], folder)
 
@@ -169,7 +145,7 @@ def generate_file_grid(folder=""):
 
 
 def generate_file_card(filename, folder):
-    """Swiss-style file card: thumbnail + name + meta + actions."""
+    """Bauhaus-style file card: thumbnail + name + meta + actions."""
     ext = get_file_extension(filename)
     file_type = get_file_type(ext)
     file_path = format_path(folder) + filename
@@ -234,12 +210,12 @@ def generate_folder_card(folder_name, parent_folder):
     </div>"""
 
 
-# ==================== 辅助函数 ====================
+# ==================== Helpers ====================
 
 def get_file_type(ext):
     """
-    根据文件扩展名返回文件类型
-    返回值: folder, image, document, code, media, archive, other
+    Map a file extension to a coarse type bucket.
+    Returns one of: image, document, code, media, archive, other.
     """
     if ext in IMAGE_EXTENSIONS:
         return 'image'
@@ -257,7 +233,7 @@ def get_file_type(ext):
 
 # Short uppercase glyph shown inside each file's thumbnail block.
 # Replaces decorative emoji with abstract, typographic labels
-# in keeping with Swiss International Style.
+# in keeping with the Bauhaus style.
 EXT_GLYPHS = {
     'pdf': 'PDF',
     'doc': 'DOC', 'docx': 'DOC',
@@ -296,8 +272,8 @@ def get_file_glyph(ext):
 
 def generate_breadcrumb(folder):
     """
-    Swiss-style breadcrumb.
-    e.g. ROOT / DOCS / 2024  (last segment highlighted in vermilion)
+    Bauhaus-style breadcrumb.
+    e.g. ROOT / DOCS / 2024  (last segment highlighted in yellow)
     """
     # Normalize to forward slashes for cross-platform paths
     parts = [p for p in folder.replace('\\', '/').split('/') if p]
@@ -315,7 +291,7 @@ def generate_breadcrumb(folder):
 
 
 def format_path(folder):
-    """格式化路径,确保以/开头和结尾"""
+    """Normalize `folder` so it both starts and ends with '/'."""
     if not folder:
         return '/'
 
@@ -329,19 +305,19 @@ def format_path(folder):
 
 
 def is_image(filename):
-    """判断文件是否为图片"""
+    """True if `filename` has an image extension."""
     return '.' in filename and get_file_extension(filename) in IMAGE_EXTENSIONS
 
 
 def get_file_extension(filename):
-    """获取文件扩展名(小写)"""
+    """Return the lowercase extension of `filename` (no leading dot), or ''."""
     return filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
 
 
 def format_file_size(size_bytes):
     """
-    格式化文件大小为人类可读格式
-    例如: 1024 -> 1 KB, 1048576 -> 1 MB
+    Format a byte count as a human-readable string.
+    e.g. 1024 -> '1.0 KB', 1048576 -> '1.0 MB'.
     """
     if size_bytes == 0:
         return '0 B'
@@ -358,15 +334,15 @@ def format_file_size(size_bytes):
 
 
 def is_previewable(filename):
-    """判断文件是否可在网页端直接预览"""
+    """True if the file can be rendered inline in the browser."""
     ext = get_file_extension(filename)
     return ext in PREVIEWABLE_EXTENSIONS
 
 
 def get_ip_addr():
     """
-    获取本机IP地址
-    支持Windows、macOS和Linux系统
+    Best-effort lookup of the host's LAN IP address.
+    Supports Windows, macOS, and Linux.
     """
     if sys.platform == 'win32':
         return socket.gethostbyname(socket.gethostname())
@@ -375,7 +351,7 @@ def get_ip_addr():
     elif sys.platform == 'linux':
         return os.popen("hostname -I").read().strip('\n').split(' ')[0]
     else:
-        # 通用方法:创建UDP连接获取本地IP
+        # Fallback: open a UDP socket to learn the local IP
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(('8.8.8.8', 80))
         ret = s.getsockname()[0]
@@ -383,32 +359,33 @@ def get_ip_addr():
         return ret
 
 
-# ==================== 命令行入口 ====================
+# ==================== CLI entry ====================
 
 @click.command()
 @click.argument('dir', default=os.getcwd())
-@click.option('--port', default=32198, help='端口号')
-@click.option('--debug', is_flag=True, help='启用调试模式')
+@click.option('--port', default=32198, help='Port to listen on')
+@click.option('--debug', is_flag=True, help='Enable Flask debug mode')
 def main(dir, port, debug):
     """
-    文件共享器
+    File sharer — share a local directory over HTTP.
 
-    启动一个简单的文件共享服务器,支持文件上传和下载。
+    Supports drag-and-drop upload, preview, and download from any
+    device on the same LAN.
 
     \b
-    示例:
-        python main.py                    # 共享当前目录
-        python main.py /path/to/folder    # 共享指定目录
-        python main.py . --port 8080      # 使用自定义端口
+    Examples:
+        python main.py                    # share the current directory
+        python main.py /path/to/folder    # share a specific directory
+        python main.py . --port 8080      # use a custom port
     """
-    # 隐藏Flask的日志信息
+    # Silence Flask's request logging
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
 
-    # 设置上传目录
+    # Shared directory (absolute path)
     app.config['UPLOAD_FOLDER'] = os.path.abspath(dir)
 
-    # 获取本机IP
+    # Best-effort LAN IP for the printed URL
     host = get_ip_addr()
 
     print("🚀 文件共享器启动成功!")
