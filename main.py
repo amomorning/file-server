@@ -150,12 +150,12 @@ def generate_file_grid(folder=""):
     path = os.path.join(app.config['UPLOAD_FOLDER'], folder)
 
     if not os.path.exists(path):
-        return '<div class="empty-state"><div>路径不存在</div></div>'
+        return '<div class="empty-state"><div class="em-num">404</div><div class="em-text">PATH NOT FOUND</div></div>'
 
     files = sorted(os.listdir(path))
 
     if not files:
-        return '<div class="empty-state"><div style="font-size: 48px; margin-bottom: 16px;">📭</div><div>此文件夹为空</div></div>'
+        return '<div class="empty-state"><div class="em-num">&#8709;</div><div class="em-text">EMPTY DIRECTORY</div></div>'
 
     html_parts = []
     for file in files:
@@ -169,98 +169,69 @@ def generate_file_grid(folder=""):
 
 
 def generate_file_card(filename, folder):
-    """生成单个文件的卡片HTML"""
+    """Swiss-style file card: thumbnail + name + meta + actions."""
     ext = get_file_extension(filename)
     file_type = get_file_type(ext)
     file_path = format_path(folder) + filename
 
-    # 获取文件大小
+    # Get file size
     full_path = os.path.join(app.config['UPLOAD_FOLDER'], folder, filename)
-    file_size = format_file_size(os.path.getsize(full_path)) if os.path.exists(full_path) else ''
+    file_size = format_file_size(os.path.getsize(full_path)) if os.path.exists(full_path) else '—'
 
-    # 判断文件是否可预览
+    # Determine previewability
     previewable = is_previewable(filename)
+    glyph = get_file_glyph(ext)
 
+    # Build thumbnail block.
+    # For non-image files a CSS-drawn Bauhaus shape (.shape) is emitted;
+    # its form (circle / square / triangle) and color are set by data-type.
     if is_image(filename):
-        # 图片文件:显示缩略图,双按钮
-        if previewable:
-            return f"""
-            <div class="file-card" data-type="image">
-                <a href="/preview{file_path}" target="_blank">
-                    <img src="/preview{file_path}" alt="{filename}">
-                </a>
-                <div class="file-name">{filename}</div>
-                <div class="file-size">{file_size}</div>
-                <div class="file-actions">
-                    <a href="/preview{file_path}" class="preview-btn" target="_blank">👁 预览</a>
-                    <a href="/download{file_path}" class="download-btn">⬇ 下载</a>
-                </div>
-            </div>
-            """
-        else:
-            return f"""
-            <div class="file-card" data-type="image">
+        thumb_html = f"""
+            <span class="type-tag">IMG</span>
+            <a href="/preview{file_path}" target="_blank">
                 <img src="/preview{file_path}" alt="{filename}">
-                <div class="file-name">{filename}</div>
-                <div class="file-size">{file_size}</div>
-                <div class="file-actions">
-                    <a href="/download{file_path}" class="download-btn full-btn">⬇ 下载</a>
-                </div>
-            </div>
-            """
-    elif ext in ['md', 'html', 'htm', 'txt', 'json', 'xml', 'csv', 'log', 'ini', 'conf', 'yaml', 'yml', 'toml', 'pdf']:
-        # 可预览的文档文件
-        icon = FILE_ICONS.get(ext, '📄')
-        if previewable:
-            return f"""
-            <div class="file-card" data-type="{file_type}">
-                <div class="file-icon">{icon}</div>
-                <div class="file-name">{filename}</div>
-                <div class="file-size">{file_size}</div>
-                <div class="file-actions">
-                    <a href="/preview{file_path}" class="preview-btn" target="_blank">👁 预览</a>
-                    <a href="/download{file_path}" class="download-btn">⬇ 下载</a>
-                </div>
-            </div>
-            """
-        else:
-            return f"""
-            <div class="file-card" data-type="{file_type}">
-                <div class="file-icon">{icon}</div>
-                <div class="file-name">{filename}</div>
-                <div class="file-size">{file_size}</div>
-                <div class="file-actions">
-                    <a href="/download{file_path}" class="download-btn full-btn">⬇ 下载</a>
-                </div>
-            </div>
-            """
+            </a>"""
     else:
-        # 其他文件:只有下载按钮
-        icon = FILE_ICONS.get(ext, '📄')
-        return f"""
-        <div class="file-card" data-type="{file_type}">
-            <div class="file-icon">{icon}</div>
-            <div class="file-name">{filename}</div>
-            <div class="file-size">{file_size}</div>
-            <div class="file-actions">
-                <a href="/download{file_path}" class="download-btn full-btn">⬇ 下载</a>
-            </div>
+        thumb_html = f"""
+            <span class="type-tag">{glyph}</span>
+            <div class="shape"></div>"""
+
+    # Build action buttons
+    if previewable:
+        actions_html = f"""
+            <a href="/preview{file_path}" class="preview-btn" target="_blank">PREVIEW</a>
+            <a href="/download{file_path}" class="download-btn">DOWNLOAD</a>"""
+    else:
+        actions_html = f'<a href="/download{file_path}" class="download-btn full-btn">DOWNLOAD</a>'
+
+    meta_html = f'{file_size} <span class="sep">/</span> {file_type.upper()}'
+
+    return f"""
+    <div class="file-card" data-type="{file_type}">
+        <div class="thumb">{thumb_html}
         </div>
-        """
+        <div class="file-name">{filename}</div>
+        <div class="file-meta">{meta_html}</div>
+        <div class="file-actions">{actions_html}
+        </div>
+    </div>"""
 
 
 def generate_folder_card(folder_name, parent_folder):
-    """生成文件夹的卡片HTML"""
+    """Bauhaus-style folder card: black square with yellow outline."""
     folder_path = format_path(parent_folder) + folder_name
     return f"""
     <div class="file-card" data-type="folder">
-        <div class="file-icon">📁</div>
-        <div class="file-name">{folder_name}</div>
-        <div class="file-actions">
-            <a href="{folder_path}" class="folder-btn">📂 打开</a>
+        <div class="thumb">
+            <span class="type-tag">DIR</span>
+            <div class="shape"></div>
         </div>
-    </div>
-    """
+        <div class="file-name">{folder_name}</div>
+        <div class="file-meta">FOLDER</div>
+        <div class="file-actions">
+            <a href="{folder_path}" class="folder-btn full-btn">OPEN</a>
+        </div>
+    </div>"""
 
 
 # ==================== 辅助函数 ====================
@@ -284,20 +255,61 @@ def get_file_type(ext):
         return 'other'
 
 
+# Short uppercase glyph shown inside each file's thumbnail block.
+# Replaces decorative emoji with abstract, typographic labels
+# in keeping with Swiss International Style.
+EXT_GLYPHS = {
+    'pdf': 'PDF',
+    'doc': 'DOC', 'docx': 'DOC',
+    'xls': 'XLS', 'xlsx': 'XLS',
+    'ppt': 'PPT', 'pptx': 'PPT',
+    'txt': 'TXT', 'md': 'MD', 'rtf': 'RTF',
+    'zip': 'ZIP', 'rar': 'ZIP', '7z': 'ZIP',
+    'tar': 'TAR', 'gz': 'GZ', 'bz2': 'BZ2',
+    'mp3': 'AUD', 'wav': 'AUD', 'flac': 'AUD',
+    'mp4': 'VID', 'avi': 'VID', 'mkv': 'VID',
+    'mov': 'MOV', 'wmv': 'VID', 'flv': 'VID',
+    'py': 'PY', 'js': 'JS', 'jsx': 'JSX',
+    'ts': 'TS', 'tsx': 'TSX',
+    'html': 'HTM', 'htm': 'HTM', 'css': 'CSS',
+    'json': 'JSN', 'xml': 'XML',
+    'yaml': 'YML', 'yml': 'YML', 'toml': 'TOML',
+    'ini': 'INI', 'conf': 'CFG', 'cfg': 'CFG',
+    'csv': 'CSV', 'log': 'LOG', 'sql': 'SQL',
+    'sh': 'SH', 'bash': 'SH',
+    'go': 'GO', 'rs': 'RS', 'java': 'JV',
+    'c': 'C', 'cpp': 'C++', 'h': 'H', 'hpp': 'HPP',
+    'cs': 'CS', 'php': 'PHP', 'rb': 'RB',
+    'kt': 'KT', 'swift': 'SW',
+    'vue': 'VUE', 'svg': 'SVG',
+    'exe': 'EXE', 'msi': 'MSI',
+    'dockerfile': 'DKR', 'makefile': 'MK',
+}
+
+
+def get_file_glyph(ext):
+    """Return short uppercase glyph for a file extension (Swiss-style)."""
+    if not ext:
+        return 'FILE'
+    return EXT_GLYPHS.get(ext, ext.upper()[:3])
+
+
 def generate_breadcrumb(folder):
     """
-    生成面包屑导航HTML
-    例如: 🏠 根目录 / photos / 2024
+    Swiss-style breadcrumb.
+    e.g. ROOT / DOCS / 2024  (last segment highlighted in vermilion)
     """
-    # 统一使用正斜杠分割,兼容Windows和Unix
+    # Normalize to forward slashes for cross-platform paths
     parts = [p for p in folder.replace('\\', '/').split('/') if p]
 
-    breadcrumb = '<a href="/">🏠 根目录</a>'
+    breadcrumb = '<a href="/">ROOT</a>'
 
     current_path = ''
-    for part in parts:
+    for i, part in enumerate(parts):
         current_path += '/' + part
-        breadcrumb += f' / <a href="{current_path}">{part}</a>'
+        is_last = (i == len(parts) - 1)
+        cls = ' class="current"' if is_last else ''
+        breadcrumb += f' <span class="sep">/</span> <a href="{current_path}"{cls}>{part.upper()}</a>'
 
     return breadcrumb
 
