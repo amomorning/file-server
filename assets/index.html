@@ -531,7 +531,7 @@
             transition: background .15s ease, transform .15s ease;
             min-height: 280px;
         }
-        .file-card:nth-child(4n) { border-right: none; }
+        .file-card.end-row { border-right: none; }
         .file-card::before {
             content: counter(card, decimal-leading-zero);
             position: absolute;
@@ -836,8 +836,6 @@
         /* ============ RESPONSIVE ============ */
         @media (max-width: 1024px) {
             .grid { grid-template-columns: repeat(3, 1fr); }
-            .file-card:nth-child(4n) { border-right: 2px solid var(--ink); }
-            .file-card:nth-child(3n) { border-right: none; }
         }
         @media (max-width: 768px) {
             .shell { padding: 0 20px; }
@@ -864,8 +862,6 @@
             .filter-tabs { overflow-x: auto; }
             .filter-tab { padding: 16px 16px; white-space: nowrap; }
             .grid { grid-template-columns: repeat(2, 1fr); }
-            .file-card:nth-child(3n) { border-right: 2px solid var(--ink); }
-            .file-card:nth-child(2n) { border-right: none; }
             .topbar { grid-template-columns: auto 1fr; }
             .topbar .meta { display: none; }
         }
@@ -1063,6 +1059,29 @@
                 }
             });
             updateCount();
+            relayout();
+        }
+
+        // ============ RELAYOUT ============
+        // Re-stripe right borders after filtering / searching.
+        // CSS :nth-child can't skip hidden (.hidden / display:none) cards,
+        // so we mark every Nth visible card with .end-row (N = current grid columns).
+        function getColumnCount() {
+            const grid = document.getElementById('fileGrid');
+            const cols = getComputedStyle(grid).gridTemplateColumns;
+            return cols.split(' ').length || 1;
+        }
+
+        function relayout() {
+            const cols = getColumnCount();
+            const cards = document.querySelectorAll('.file-card');
+            cards.forEach(c => c.classList.remove('end-row'));
+            let visIdx = 0;
+            cards.forEach(c => {
+                if (c.classList.contains('hidden')) return;
+                visIdx++;
+                if (visIdx % cols === 0) c.classList.add('end-row');
+            });
         }
 
         // ============ COUNT ============
@@ -1072,6 +1091,8 @@
             el.textContent = String(visible).padStart(2, '0');
         }
         updateCount();
+        relayout();
+        window.addEventListener('resize', relayout);
     </script>
 </body>
 </html>
