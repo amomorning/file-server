@@ -1,151 +1,62 @@
-# 文件共享器
+# file-server
 
-一个简单易用的文件共享服务器,支持拖放上传、文件预览、文件夹导航等功能。
+A single-file Flask server that shares a local directory over HTTP with a
+Bauhaus-styled file browser: drag-and-drop upload, in-browser preview,
+folder navigation, type filtering, and substring search.
 
-## 功能特性
-
-- 📤 **拖放上传** - 支持拖拽文件到浏览器上传
-- 🎨 **现代化界面** - 美观的渐变色设计和卡片式布局
-- 🔍 **文件预览** - 支持多种文件类型的网页端直接预览
-- 📂 **文件夹导航** - 支持浏览子文件夹,面包屑导航
-- 📊 **上传进度** - 实时显示上传进度条
-- 📱 **响应式设计** - 自适应手机、平板、电脑
-- 🎯 **文件图标** - 根据文件类型显示对应图标
-
-## 网页端直接预览支持
-
-以下文件类型可以在浏览器中直接预览,无需下载:
-
-### 📄 文档类
-- **PDF 文档** (`.pdf`) - 浏览器内置 PDF 查看器
-- **Markdown 文件** (`.md`) - 渲染后的格式化文本
-- **HTML 文件** (`.html`, `.htm`) - 完整的网页渲染
-- **纯文本文件** (`.txt`, `.json`, `.xml`, `.csv`, `.log`, `.ini`, `.conf`, `.yaml`, `.yml`, `.toml`) - 代码高亮显示
-
-### 🖼️ 图片类
-- **图片文件** (`.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.svg`, `.bmp`, `.ico`) - 高质量图片预览
-
-### 其他文件类型
-其他类型的文件(如视频、音频、Office 文档等)会显示文件类型图标,点击后会触发下载,暂不支持网页端直接预览。
-
-> **提示**: 文件预览功能在支持的文件类型下会自动启用,无需额外配置。
-
-## 安装依赖
+## Install
 
 ```bash
 pip install flask click
 ```
 
-## 使用方法
-
-### 基本用法
+## Usage
 
 ```bash
-# 共享当前目录
+# Share the current directory on the default port (32198)
 python main.py
 
-# 共享指定目录
+# Share a specific directory
 python main.py /path/to/folder
 
-# 使用自定义端口
-python main.py . --port 8080
-
-# 启用调试模式
-python main.py . --debug
+# Custom port + debug mode
+python main.py . --port 8080 --debug
 ```
 
-### 访问地址
+Open the printed URL (`http://<host>:<port>/`) in a browser. Any device on
+the same LAN can reach it.
 
-启动后会显示访问地址,例如:
-```
-🚀 文件共享器启动成功!
-📂 共享目录: /Users/username/projects
-🌐 访问地址: http://192.168.1.100:32198
-💡 提示: 在同一局域网的设备都可以访问此地址
-```
+### CLI flags
 
-在浏览器中打开显示的地址即可使用。同一局域网内的其他设备也可以访问。
+| Flag | Default | Purpose |
+| --- | --- | --- |
+| `dir` (positional) | current working dir | directory to share |
+| `--port` | `32198` | HTTP port |
+| `--debug` | off | Flask debug mode |
 
-### 命令行参数
+## Features
 
-- `dir` - 要共享的目录路径(默认:当前目录)
-- `--port` - 指定端口号(默认:32198)
-- `--debug` - 启用调试模式,方便开发
+- **Upload** — drag-and-drop or click; progress bar; 100 MB cap.
+- **Preview** — PDF, Markdown, HTML, plain text (`.txt/.json/.xml/.csv/...`),
+  images (`.png/.jpg/.gif/.svg/...`).
+- **Navigation** — breadcrumbs, type filter tabs, substring search.
+- **Type encoding** — folder / image / document / code / media / archive,
+  each rendered as a Bauhaus shape + color pair.
 
-## 项目结构
+## Project layout
 
 ```
 file-server/
-├── main.py              # 主程序文件
-├── assets/
-│   ├── favicon_32.png       # 网站图标
-│   └── index.html       # 网页模板
-└── README.md            # 说明文档
+├── main.py              # Flask app + card generators + CLI
+└── assets/
+    ├── index.html       # inline CSS/JS Bauhaus template
+    └── favicon_32.png
 ```
 
-## 技术栈
+## Tech
 
-- **后端**: Flask (Python Web框架)
-- **前端**: HTML5 + CSS3 + JavaScript
-- **CLI**: Click (命令行界面)
+Flask · Click · vanilla HTML/CSS/JS (no build step).
 
-## 支持的文件类型图标
+## License
 
-为便于识别,系统会为以下文件类型显示专属图标:
-
-### 📄 文档类
-
-- 📄 PDF文档 (`.pdf`)
-- 📝 Word文档 (`.doc`, `.docx`)
-- 📊 Excel表格 (`.xls`, `.xlsx`)
-- 📽 PPT演示文稿 (`.ppt`, `.pptx`)
-- 📜 Markdown文件 (`.md`)
-- 📃 纯文本文件 (`.txt`)
-
-### 🎵 媒体类
-
-- 🎵 音频文件 (`.mp3`, `.wav`, `.flac`, `.m4a`, `.aac`)
-- 🎬 视频文件 (`.mp4`, `.avi`, `.mkv`, `.mov`, `.wmv`)
-- 🖼️ 图片文件 (`.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.svg`, `.bmp`)
-
-### 💻 代码类
-
-- 🐍 Python代码 (`.py`)
-- 📜 JavaScript代码 (`.js`, `.jsx`, `.ts`, `.tsx`)
-- 🌐 HTML文件 (`.html`, `.htm`)
-- 🎨 CSS样式 (`.css`, `.scss`, `.sass`)
-- ☕ Java代码 (`.java`)
-- 🦀 Rust代码 (`.rs`)
-- 🐹 Go代码 (`.go`)
-- 💎 Ruby代码 (`.rb`)
-- 📦 配置文件 (`.json`, `.xml`, `.yaml`, `.yml`, `.toml`, `.ini`)
-
-### 📦 压缩包类
-
-- 📦 压缩文件 (`.zip`, `.rar`, `.7z`, `.tar`, `.gz`)
-
-### 🗂️ 其他
-
-- 🗂️ 文件夹
-- 📎 未知文件类型
-
-## 配置
-
-默认配置:
-
-- 最大文件大小: 100MB
-- 默认端口: 32198
-- 监听地址: 0.0.0.0 (所有网络接口)
-
-如需修改,编辑 [main.py](main.py:17) 中的配置。
-
-## 注意事项
-
-- 确保已安装Flask和Click
-- 在同一局域网内设备可访问
-- 上传的文件会保存到指定目录
-- 按 Ctrl+C 停止服务器
-
-## 许可
-
-MIT License
+MIT
